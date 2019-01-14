@@ -596,9 +596,15 @@ static int recv_id_or_tmpvc_info(sockconn_t *const sc, int *got_sc_eof)
     }
     MPIR_ERR_CHKANDJUMP1(nread == -1 && errno != EAGAIN, mpi_errno, MPI_ERR_OTHER, "**read", "**read %s", MPIR_Strerror(errno));
     MPIR_ERR_CHKANDJUMP(nread != hdr_len, mpi_errno, MPI_ERR_OTHER, "**read");  /* FIXME-Z1 */
-    MPIR_Assert(hdr.pkt_type == MPIDI_NEM_TCP_SOCKSM_PKT_ID_INFO ||
+    /*MPIR_Assert(hdr.pkt_type == MPIDI_NEM_TCP_SOCKSM_PKT_ID_INFO ||
 		hdr.pkt_type == MPIDI_NEM_TCP_SOCKSM_PKT_TMPVC_INFO);
-    MPIR_Assert(hdr.datalen != 0);
+    MPIR_Assert(hdr.datalen != 0);*/
+		/* Jing's fix */
+    if (hdr.pkt_type != MPIDI_NEM_TCP_SOCKSM_PKT_ID_INFO ||
+		hdr.pkt_type != MPIDI_NEM_TCP_SOCKSM_PKT_TMPVC_INFO)
+			goto fn_fail;
+		if (hdr.datalen == 0 )
+			goto fn_fail;
     
     if (hdr.pkt_type == MPIDI_NEM_TCP_SOCKSM_PKT_ID_INFO) {
 	iov[0].iov_base = (void *) &(sc->pg_rank);
