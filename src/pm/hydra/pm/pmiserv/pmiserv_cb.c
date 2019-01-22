@@ -445,7 +445,9 @@ HYD_status HYD_pmcd_pmiserv_proxy_init_cb(int fd, HYD_event_t events, void *user
     /* Read the proxy ID */
     status = HYDU_sock_read(fd, &proxy_id, sizeof(int), &count, &closed, HYDU_SOCK_COMM_MSGWAIT);
     HYDU_ERR_POP(status, "sock read returned error\n");
-    HYDU_ASSERT(!closed, status);
+		if( closed )
+			goto fn_exit;
+    /*HYDU_ASSERT(!closed, status);*/
 
     /* Find the process group */
     for (pg = &HYD_server_info.pg_list; pg; pg = pg->next)
@@ -459,8 +461,10 @@ HYD_status HYD_pmcd_pmiserv_proxy_init_cb(int fd, HYD_event_t events, void *user
         if (proxy->proxy_id == proxy_id)
             break;
     }
-    HYDU_ERR_CHKANDJUMP(status, proxy == NULL, HYD_INTERNAL_ERROR,
-                        "cannot find proxy with ID %d\n", proxy_id);
+    /*HYDU_ERR_CHKANDJUMP(status, proxy == NULL, HYD_INTERNAL_ERROR,
+                        "cannot find proxy with ID %d\n", proxy_id);*/
+		if ( proxy == NULL ) 
+			goto fn_exit;
 
     /* This will be the control socket for this proxy */
     proxy->control_fd = fd;
