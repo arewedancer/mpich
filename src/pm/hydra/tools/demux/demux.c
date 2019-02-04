@@ -95,8 +95,9 @@ HYD_status HYDT_dmx_register_fd(int num_fds, int *fd, HYD_event_t events, void *
         while (cb_element) {
             for (j = 0; j < cb_element->num_fds; j++) {
                 if (cb_element->fd[j] == fd[i]) {
-                    HYDU_ERR_SETANDJUMP(status, HYD_INTERNAL_ERROR,
-                                        "registering duplicate fd %d\n", fd[i]);
+										if (num_fds == 1) goto fn_exit;
+                    /*HYDU_ERR_SETANDJUMP(status, HYD_INTERNAL_ERROR,
+                                       "registering duplicate fd %d\n", fd[i]);*/
                 }
             }
             cb_element = cb_element->next;

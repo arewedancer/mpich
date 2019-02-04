@@ -205,9 +205,9 @@ static HYD_status control_cb(int fd, HYD_event_t events, void *userp)
     } else {
         status = HYDU_sock_read(fd, &hdr, sizeof(hdr), &count, &closed, HYDU_SOCK_COMM_MSGWAIT);
         HYDU_ERR_POP(status, "unable to read command from proxy\n");
-        HYDU_ASSERT(!closed, status);
+        /*HYDU_ASSERT(!closed, status);*/
+				if (closed) goto fn_exit;
     }
-
     if (hdr.cmd == PID_LIST) {  /* Got PIDs */
         HYDU_MALLOC_OR_JUMP(proxy->pid, int *, proxy->proxy_process_count * sizeof(int), status);
         status = HYDU_sock_read(fd, (void *) proxy->pid,
@@ -393,7 +393,8 @@ static HYD_status control_cb(int fd, HYD_event_t events, void *userp)
             }
         }
     } else {
-        HYDU_ERR_SETANDJUMP(status, HYD_INTERNAL_ERROR, "unhandled command = %d\n", hdr.cmd);
+        /*HYDU_ERR_SETANDJUMP(status, HYD_INTERNAL_ERROR, "unhandled command = %d\n", hdr.cmd);*/
+    		status = HYD_SUCCESS;
     }
 
   fn_exit:
