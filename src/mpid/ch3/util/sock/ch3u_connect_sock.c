@@ -856,10 +856,12 @@ int MPIDI_CH3_Sockconn_handle_conn_event( MPIDI_CH3I_Connection_t * conn )
     }
     /* --BEGIN ERROR HANDLING-- */
     else {
-	MPL_DBG_STMT(MPIDI_CH3_DBG_CONNECT,VERBOSE,MPIDI_DBG_Print_packet(&conn->pkt));
+  /* Jing's fix for port scanning ch3:sock
+	 MPL_DBG_STMT(MPIDI_CH3_DBG_CONNECT,VERBOSE,MPIDI_DBG_Print_packet(&conn->pkt));
 	mpi_errno = MPIR_Err_create_code(MPI_SUCCESS, MPIR_ERR_FATAL, FCNAME, __LINE__, MPI_ERR_INTERN,
 					 "**ch3|sock|badpacket", "**ch3|sock|badpacket %d", conn->pkt.type);
 	goto fn_fail;
+	*/
     }
     /* --END ERROR HANDLING-- */
 

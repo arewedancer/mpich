@@ -600,11 +600,12 @@ static int recv_id_or_tmpvc_info(sockconn_t *const sc, int *got_sc_eof)
 		hdr.pkt_type == MPIDI_NEM_TCP_SOCKSM_PKT_TMPVC_INFO);
     MPIR_Assert(hdr.datalen != 0);*/
 		/* Jing's fix */
-    if (hdr.pkt_type != MPIDI_NEM_TCP_SOCKSM_PKT_ID_INFO ||
+		/* ch3:nemesis */
+    if (hdr.pkt_type != MPIDI_NEM_TCP_SOCKSM_PKT_ID_INFO &&
 		hdr.pkt_type != MPIDI_NEM_TCP_SOCKSM_PKT_TMPVC_INFO)
-			goto fn_fail;
+			goto fn_exit;
 		if (hdr.datalen == 0 )
-			goto fn_fail;
+			goto fn_exit;
     
     if (hdr.pkt_type == MPIDI_NEM_TCP_SOCKSM_PKT_ID_INFO) {
 	iov[0].iov_base = (void *) &(sc->pg_rank);
