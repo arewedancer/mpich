@@ -1,0 +1,131 @@
+1. ch3:nemesis, rank fix, test case: cat <file> | nc -v -w1 host port
+
+diff --git a/src/mpid/ch3/channels/nemesis/netmod/tcp/socksm.c b/src/mpid/ch3/channels/nemesis/netmod/tcp/socksm.c
+index 691ea62..d410e74 100644
+--- a/src/mpid/ch3/channels/nemesis/netmod/tcp/socksm.c
++++ b/src/mpid/ch3/channels/nemesis/netmod/tcp/socksm.c
+@@ -596,9 +596,15 @@ static int recv_id_or_tmpvc_info(sockconn_t *const sc, int *got_sc_eof)
+     }
+     MPIR_ERR_CHKANDJUMP1(nread == -1 && errno != EAGAIN, mpi_errno, MPI_ERR_OTHER, "**read", "**read %s", MPIR_Strerror(errno));
+     MPIR_ERR_CHKANDJUMP(nread != hdr_len, mpi_errno, MPI_ERR_OTHER, "**read");  /* FIXME-Z1 */
+-    MPIR_Assert(hdr.pkt_type == MPIDI_NEM_TCP_SOCKSM_PKT_ID_INFO ||
++    /*MPIR_Assert(hdr.pkt_type == MPIDI_NEM_TCP_SOCKSM_PKT_ID_INFO ||
+                hdr.pkt_type == MPIDI_NEM_TCP_SOCKSM_PKT_TMPVC_INFO);
+-    MPIR_Assert(hdr.datalen != 0);
++    MPIR_Assert(hdr.datalen != 0);*/
++               /* Jing's fix */
++    if (hdr.pkt_type != MPIDI_NEM_TCP_SOCKSM_PKT_ID_INFO ||
++               hdr.pkt_type != MPIDI_NEM_TCP_SOCKSM_PKT_TMPVC_INFO)
++                       goto fn_fail;
++               if (hdr.datalen == 0 )
++                       goto fn_fail;
+
+t a/src/mpid/ch3/channels/nemesis/netmod/tcp/socksm.c b/src/mpid/ch3/channels/nemesis/netmod/tcp/socksm.c
+index d410e74..b2b6110 100644
+--- a/src/mpid/ch3/channels/nemesis/netmod/tcp/socksm.c
++++ b/src/mpid/ch3/channels/nemesis/netmod/tcp/socksm.c
+@@ -600,11 +600,12 @@ static int recv_id_or_tmpvc_info(sockconn_t *const sc, int *got_sc_eof)
+                hdr.pkt_type == MPIDI_NEM_TCP_SOCKSM_PKT_TMPVC_INFO);
+     MPIR_Assert(hdr.datalen != 0);*/
+                /* Jing's fix */
+-    if (hdr.pkt_type != MPIDI_NEM_TCP_SOCKSM_PKT_ID_INFO ||
++               /* ch3:nemesis */
++    if (hdr.pkt_type != MPIDI_NEM_TCP_SOCKSM_PKT_ID_INFO &&
+                hdr.pkt_type != MPIDI_NEM_TCP_SOCKSM_PKT_TMPVC_INFO)
+-                       goto fn_fail;
++                       goto fn_exit;
+                if (hdr.datalen == 0 )
+-                       goto fn_fail;
++                       goto fn_exit;
+     
+
+2. ch3:sock, rank fix, test case: cat<file> | nc -v -w1 host port
+
+diff --git a/src/mpid/ch3/util/sock/ch3u_connect_sock.c b/src/mpid/ch3/util/sock/ch3u_connect_sock.c
+index ae7c7f2..d6c64b0 100644
+--- a/src/mpid/ch3/util/sock/ch3u_connect_sock.c
++++ b/src/mpid/ch3/util/sock/ch3u_connect_sock.c
+@@ -856,10 +856,12 @@ int MPIDI_CH3_Sockconn_handle_conn_event( MPIDI_CH3I_Connection_t * conn )
+     }
+     /* --BEGIN ERROR HANDLING-- */
+     else {
+-       MPL_DBG_STMT(MPIDI_CH3_DBG_CONNECT,VERBOSE,MPIDI_DBG_Print_packet(&conn->pkt));
++  /* Jing's fix for port scanning ch3:sock
++        MPL_DBG_STMT(MPIDI_CH3_DBG_CONNECT,VERBOSE,MPIDI_DBG_Print_packet(&conn->pkt));
+        mpi_errno = MPIR_Err_create_code(MPI_SUCCESS, MPIR_ERR_FATAL, FCNAME, __LINE__, MPI_ERR_INTERN,
+                                         "**ch3|sock|badpacket", "**ch3|sock|badpacket %d", conn->pkt.type);
+        goto fn_fail;
++       */
+     }
+     /* --END ERROR HANDLING-- */
+ 
+
+3. hydra fix, test case: nmap -sT -p <port> host
+
+diff --git a/src/pm/hydra/pm/pmiserv/pmiserv_cb.c b/src/pm/hydra/pm/pmiserv/pmiserv_cb.c
+index 7822dc0..6acfe69 100644
+--- a/src/pm/hydra/pm/pmiserv/pmiserv_cb.c
++++ b/src/pm/hydra/pm/pmiserv/pmiserv_cb.c
+@@ -445,7 +445,9 @@ HYD_status HYD_pmcd_pmiserv_proxy_init_cb(int fd, HYD_event_t events, void *user
+     /* Read the proxy ID */
+     status = HYDU_sock_read(fd, &proxy_id, sizeof(int), &count, &closed, HYDU_SOCK_COMM_MSGWAIT);
+     HYDU_ERR_POP(status, "sock read returned error\n");
+-    HYDU_ASSERT(!closed, status);
++               if( closed )
++                       goto fn_exit;
++    /*HYDU_ASSERT(!closed, status);*/
+ 
+     /* Find the process group */
+     for (pg = &HYD_server_info.pg_list; pg; pg = pg->next)
+@@ -459,8 +461,10 @@ HYD_status HYD_pmcd_pmiserv_proxy_init_cb(int fd, HYD_event_t events, void *user
+         if (proxy->proxy_id == proxy_id)
+             break;
+     }
+-    HYDU_ERR_CHKANDJUMP(status, proxy == NULL, HYD_INTERNAL_ERROR,
+-                        "cannot find proxy with ID %d\n", proxy_id);
++    /*HYDU_ERR_CHKANDJUMP(status, proxy == NULL, HYD_INTERNAL_ERROR,
++                        "cannot find proxy with ID %d\n", proxy_id);*/
++               if ( proxy == NULL ) 
++                       goto fn_exit;
+ 
+
+4. hydra fix, test case: cat /dev/zero | nc -v -w1 host port
+
+--- a/src/pm/hydra/pm/pmiserv/pmiserv_cb.c
++++ b/src/pm/hydra/pm/pmiserv/pmiserv_cb.c
+@@ -205,9 +205,9 @@ static HYD_status control_cb(int fd, HYD_event_t events, void *userp)
+     } else {
+         status = HYDU_sock_read(fd, &hdr, sizeof(hdr), &count, &closed, HYDU_SOCK_COMM_MSGWAIT);
+         HYDU_ERR_POP(status, "unable to read command from proxy\n");
+-        HYDU_ASSERT(!closed, status);
++        /*HYDU_ASSERT(!closed, status);*/
++                               if (closed) goto fn_exit;
+     }
+-
+     if (hdr.cmd == PID_LIST) {  /* Got PIDs */
+         HYDU_MALLOC_OR_JUMP(proxy->pid, int *, proxy->proxy_process_count * sizeof(int), status);
+         status = HYDU_sock_read(fd, (void *) proxy->pid,
+@@ -393,7 +393,8 @@ static HYD_status control_cb(int fd, HYD_event_t events, void *userp)
+             }
+         }
+     } else {
+-        HYDU_ERR_SETANDJUMP(status, HYD_INTERNAL_ERROR, "unhandled command = %d\n", hdr.cmd);
++        /*HYDU_ERR_SETANDJUMP(status, HYD_INTERNAL_ERROR, "unhandled command = %d\n", hdr.cmd);*/
++               status = HYD_SUCCESS;
+     }
+ 
+--- a/src/pm/hydra/tools/demux/demux.c
++++ b/src/pm/hydra/tools/demux/demux.c
+@@ -95,8 +95,9 @@ HYD_status HYDT_dmx_register_fd(int num_fds, int *fd, HYD_event_t events, void *
+         while (cb_element) {
+             for (j = 0; j < cb_element->num_fds; j++) {
+                 if (cb_element->fd[j] == fd[i]) {
+-                    HYDU_ERR_SETANDJUMP(status, HYD_INTERNAL_ERROR,
+-                                        "registering duplicate fd %d\n", fd[i]);
++                                                                               if (num_fds == 1) goto fn_exit;
++                    /*HYDU_ERR_SETANDJUMP(status, HYD_INTERNAL_ERROR,
++                                       "registering duplicate fd %d\n", fd[i]);*/
+                 }
+             }
+             cb_element = cb_element->next;
+

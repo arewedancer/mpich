@@ -1,0 +1,19 @@
+demux is an event listerner engine in hydra.
+For each rank process socket(established socket), demux polls/selects it and execute a call back function.
+see the graph.
+
+mpiexec flow:
+init demux engine->create socket channel between hydra and each rank->
+register callbacks for each event(read, write)
+then demux keeps polling sockets, any event is active, call the callbacks.
+
+code path:
+mpiexec.c main() -> 
+	demux.c HYDT_dmx_init() // init demux engine polling or selecting mechanism
+	./hydra/pm/pmiserv/pmiserv_pmci.c HYD_pmci_launch_procs() //open control sockets
+		-> ./pm/hydra/pm/pmiserv/pmiserv_cb.c HYD_pmcd_pmiserv_control_listen_cb() // register listening socket for pollin with this callback
+			-> ./pm/hydra/pm/pmiserv/pmiserv_cb.c HYD_pmcd_pmiserv_proxy_init_cb() // register accepted sockets(rank) for polling with this callback
+				-> ./pm/hydra/pm/pmiserv/pmiserv_cb.c control_cb() // register each read with control_cb(), control_cb is the final
+																											// function to communicate between rank socket and hydra socket
+  HYD_pmci_wait_for_completion() // wait
+
